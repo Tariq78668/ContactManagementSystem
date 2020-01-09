@@ -1,0 +1,210 @@
+﻿@model ContactManagementSystem.Models.EmployeeViewModel
+
+@{
+    ViewBag.Title = "Home";
+}
+
+
+
+<div class="container" style="margin-top:3%">
+    <a href="#" class="btn btn-info" onclick="AddNewEmployee(0)">Add New Employee</a> <br /><br />
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Emp ID</th>
+                <th>Name</th>
+                <th>Department</th>
+                <th>Address</th>
+                <th>Contact</th>
+                <th>Image</th>
+                <th>Action(Edit)</th>
+                <th>Action(Delete)</th>
+
+            </tr>
+        </thead>
+        <tbody id="SetEmployeeList">
+            <tr id="LoadingStatus" style="color:red"></tr>
+        </tbody>
+    </table>
+</div>
+<div class="modal fade" id="MyModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <a href="#" class="close" data-dismiss="modal">&times;</a>
+                <h4 id="ModalTitle"></h4>
+            </div>
+            <div class="modal-body">
+                <form id="form">
+                    <fieldset id="SubmitForm">
+                        @Html.HiddenFor(m => m.EmpID, new { @id = "EmployeeId" })
+                        <div class="form-group">
+                            @Html.TextBoxFor(m => m.EmpName, new { @id = "Empname", @class = "form-control", @placeholder = "Name*" })
+                        </div>
+                        <div class="form-group">
+                            @Html.TextBoxFor(m => m.EmpAddress, new { @id = "address", @class = "form-control", @placeholder = "Address*" })
+                        </div>
+
+                        <div class="form-group">
+                            @Html.TextBoxFor(m => m.EmpContact, new { @id = "contact", @class = "form-control", @placeholder = "Contact Number*" })
+                        </div>
+                        <div class="form-group">
+                            @*@Html.TextBoxFor(m => m.EmpImage, new { @id = "Image", @class = "form-control", @placeholder = "Image*" })*@
+                            <img class="img-thumbnail"/>
+                            @Html.TextBoxFor(m => m.EmpImage, new { @id = "Image", type = "file", multiple = "multiple", accept = "image/jpeg,  image/jpg", onchange = "encodeImgtoBase64(this)" })
+                        </div>
+
+                        <div class="form-group">
+                            @Html.DropDownListFor(m => m.DepartmentID, ViewBag.ListOfDepartment as SelectList, "--Select Dept--", new { @id = "DropDwn", @class = "form-control" })
+                        </div>
+                        <div class="form-group">
+                            <a href="#" class="btn btn-block btn-danger" id="SaveEmpRecord">Save</a>
+                        </div>
+
+                        <a id="convertImg" href=""  hidden></a>
+
+                    </fieldset>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="DeleteConfirmation">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <a href="#" class="close" data-dismiss="modal">&times;</a>
+                <h4>Delete Employee Record</h4>
+            </div>
+            <div class="modal-body">
+                <h4>Are You Sure? You Want To Delete This Record.</h4>
+            </div>
+            <div class="modal-footer">
+                <a href="#" class="btn btn-primary" data-dismiss="modal" id="r">Cancle</a>
+                <a href="#" class="btn btn-danger" onclick="ConfirmDelete()">Confirm</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="~/Scripts/jquery-3.3.1.min.js"></script>
+
+<script>
+    $("#LoadingStatus").html("Loading....");
+    $.get("/Home/GetEmployeeList", null, DataBind);
+    function DataBind(EmpList) {
+
+        var SetData = $("#SetEmployeeList");
+        for (var i = 0; i < EmpList.length; i++) {
+            var Data = "<tr class='row_" + EmpList[i].EmpID + "'>" +
+                "<td>" + EmpList[i].EmpID + "</td>" +
+                "<td>" + EmpList[i].EmpName + "</td>" +
+                "<td>" + EmpList[i].DepartmentName + "</td>" +
+                "<td>" + EmpList[i].EmpAddress + "</td>" +
+                "<td>" + EmpList[i].EmpContact + "</td>" +
+                "<td> <img src=\'" + EmpList[i].EmpImage + "\' class='img-thumbnail'width= '100' height='125'></td>" +
+                "<td>" + "<a href='#' class='btn btn-warning' onclick='EditEmpRecord(" + EmpList[i].EmpID + ")' ><span class='glyphicon glyphicon-edit'></span></a>" + "</td>" +
+                "<td>" + "<a href='#' class='btn btn-danger' onclick='DeleteEmpRecord(" + EmpList[i].EmpID + ")'><span class='glyphicon glyphicon-trash'></span></a>" + "</td>" +
+                "</tr>";
+            SetData.append(Data);
+            $("#LoadingStatus").html(" ");
+
+        }
+    }
+
+
+    function AddNewEmployee(EmployeeId) {
+        $("#form")[0].reset();
+        $("#EmployeeId").val(0);
+        $("#DropDwn option:selected").text("--Select Dept--");
+        $("#ModalTitle").html("Add New Employee");
+        $("#MyModal").modal();
+
+    }
+
+
+
+    function EditEmpRecord(EmployeeId) {
+        var url = "/Home/GetEmployeeById?EmployeeId=" + EmployeeId;
+        $("#ModalTitle").html("Update Employee Record");
+        $("#MyModal").modal();
+        $.ajax({
+            type: "GET",
+            url: url,
+            success: function (data) {
+                var obj = JSON.parse(data);
+                $("#EmployeeId").val(obj.EmpID);
+                $("#Empname").val(obj.EmpName);
+                $("#address").val(obj.EmpAddress);
+                $("#contact").val(obj.EmpContact);
+                $("#Image").val(obj.EmpImage);
+                $("#DropDwn option:selected").text(obj.tbldepartment.DepartmentName);
+                $("#DropDwn option:selected").val(obj.DepartmentID);
+
+            }
+        })
+    }
+
+
+
+    function encodeImgtoBase64(element) {
+      var file = element.files[0];
+      var reader = new FileReader();
+      reader.onloadend = function() {
+       
+         // $("#convertImg").attr("href", reader.result);
+           $("#convertImg").attr("href", reader.result);
+        $("#convertImg").text(reader.result);
+      }
+      reader.readAsDataURL(file);
+    }
+
+
+    $("#SaveEmpRecord").click(function () {
+        var data = $("#SubmitForm").serialize();
+        var encodedImage = $("#convertImg").attr("href");
+       // alert(data);
+        data = data + "&EmpImage=" + encodedImage;
+        //alert(data);
+        $.ajax({
+            type: "Post",
+            url: "/Home/SaveDataInDatabase",
+            data: data,
+            success: function (result) {
+                alert("Success!..");
+                window.location.href = "/Home/index";
+                $("#MyModal").modal("hide");
+
+            }
+        })
+    })
+
+    var DeleteEmpRecord = function (EmployeeId) {
+        $("#EmployeeId").val(EmployeeId);
+        $("#DeleteConfirmation").modal("show");
+    }
+    var ConfirmDelete = function () {
+        var StuId = $("#EmployeeId").val();
+        $.ajax({
+            type: "POST",
+            url: "/Home/DeleteStudentRecord?EmployeeId=" + StuId,
+            success: function (result) {
+                $("#DeleteConfirmation").modal("hide");
+                $(".row_" + StuId).remove();
+            }
+        })
+    }
+
+    function ShowImagePreview(input) {  
+            if (input.files && input.files[0]) {  
+                var reader = new FileReader();  
+                reader.onload = function (e) {  
+                    $('#imagePreview').prop('src', e.target.result);  
+                };  
+                reader.readAsDataURL(input.files[0]);  
+            }  
+        }  
+
+</script>
